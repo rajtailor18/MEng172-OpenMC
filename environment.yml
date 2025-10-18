@@ -1,0 +1,20 @@
+name: openmc
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - numpy
+  - pandas
+  - scipy
+  - h5py
+  - matplotlib
+  - jupyterlab
+  - ipykernel
+  - openmc
+  - openmc-data
+  - mpi
+  - mpi4py
+  - pip
+  - pip:
+      - tqdm
+      - pydantic
