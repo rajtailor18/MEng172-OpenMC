@@ -6,35 +6,37 @@ This repo gives you a reproducible OpenMC setup in GitHub Codespaces with Jupyte
 ## One-time: Create Codespace
 1. Push these files to a GitHub repo (or create the repo from this folder).
 2. Click **Code → Codespaces → Create codespace on main**.
-3. Wait for the container to build. When done, you'll have Jupyter ready.
+3. Wait for the container to build. When done, you'll have the space ready.
 
-## Verify OpenMC
-Open a new Jupyter Notebook and run:
+## Setup Cross sectional data OpenMC
+Open the codespace and in the terminal type these two commands
+The first one will take a few mins since its 3gb
 ```python
-import openmc, os
-print("OpenMC:", openmc.__version__)
-print("OPENMC_CROSS_SECTIONS:", os.environ.get("OPENMC_CROSS_SECTIONS"))
+python setup.py
+source ~/.bashrc
 ```
 
 If cross sections aren't set, run in the terminal:
 ```bash
-echo "export OPENMC_CROSS_SECTIONS=$CONDA_PREFIX/share/openmc/cross_sections.xml" >> ~/.bashrc
 source ~/.bashrc
 ```
 
 ## Project layout
 ```
-notebooks/   # Exploratory notebooks
-models/      # Reusable model builders
-runs/        # Param sweeps and batch scripts
-data/        # Outputs (gitignored)
-.devcontainer/  # Devcontainer setup
-environment.yml
+.devcontainer  - DO NOT TOUCH
+models - will host all of our models, please place your respected openmc python script in the correct folder
+environment.yml - DO NOT TOUCH
+README.md - feel free to edit
+setup.py is the setup file that needs to be run everytime you set up the codebase
+test_openmc.py is the file to test to see if OpenMC is running correctly on your setup
 ```
 
-## Example usage
-- Single-core: `openmc`
-- MPI: `mpiexec -n 4 openmc`
+## Publishing your work
+- 'git status' to see all the code you added
+- VERY IMPORTANT - delete the cross sectional files the .tar file and the folder it creates endfb80-lowtemp
+- 'git add .' to add all your changes
+- 'git commit -m "YOUR NOTES"'
+- 'git push' to push your changes
 
 ## Notes
 - The `openmc-data` package installs an HDF5 nuclear data library and `cross_sections.xml`.
