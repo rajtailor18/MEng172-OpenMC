@@ -5,7 +5,7 @@ This repo gives you a reproducible OpenMC setup in GitHub Codespaces with Jupyte
 
 ## One-time: Create Codespace
 1. Push these files to a GitHub repo (or create the repo from this folder).
-2. Click **Code → Codespaces → Create codespace on main**.
+2. Click **Code → Codespaces → MEng-172**.
 3. Wait for the container to build. When done, you'll have the space ready.
 
 ## Setup Cross sectional data OpenMC
