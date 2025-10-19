@@ -1,0 +1,13 @@
+{
+  "name": "OpenMC - MEng-172",
+  "image": "mcr.microsoft.com/devcontainers/miniconda:0-3",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-toolsai.jupyter",
+        "ms-python.python"
+      ]
+    }
+  },
+  "remoteUser": "vscode"
+}
