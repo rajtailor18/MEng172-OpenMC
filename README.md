@@ -21,6 +21,17 @@ If cross sections aren't set, run in the terminal:
 source ~/.bashrc
 ```
 
+## Enable OpenMC
+Open the codespace and in the terminal type these two commands
+The first one will take a few mins since its 3gb
+```python
+micromamba activate openmc
+```
+And then test to see if it works by running this command
+```python
+python test_openmc.py
+```
+
 ## Project layout
 ```
 .devcontainer  - DO NOT TOUCH
