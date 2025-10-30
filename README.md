@@ -49,8 +49,12 @@ test_openmc.py is the file to test to see if OpenMC is running correctly on your
 - 'git commit -m "YOUR NOTES"'
 - 'git push' to push your changes
 
+## OpenMC Notes
+- Sometimes, OpenMC puts limits on how long it should follow a neutron — like if it’s bouncing too much or has too little energy then it will stop tracking it.
+- OpenMC alone does not do time-dependent simulations -> Take a look at OpenMOC or Serpent transient mode 
+
+
 ## Notes
 - The `openmc-data` package installs an HDF5 nuclear data library and `cross_sections.xml`.
 - Everyone on the team will get the exact same environment when launching a Codespace.
-```
 
