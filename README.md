@@ -53,6 +53,16 @@ test_openmc.py is the file to test to see if OpenMC is running correctly on your
 - Sometimes, OpenMC puts limits on how long it should follow a neutron — like if it’s bouncing too much or has too little energy then it will stop tracking it.
 - OpenMC alone does not do time-dependent simulations -> Take a look at OpenMOC or Serpent transient mode 
 
+## Visualizations Notes
+Dependencies 
+- pip install plotly
+
+To see 3D Model 
+- python -m http.server 8000
+- You'll see something like 'Serving HTTP on 0.0.0.0 port 8000 (http://0.0.0.0:8000/) ...'
+- Click on http://0.0.0.0:8000/
+- Then click on the .html file in the data folder
+
 
 ## Notes
 - The `openmc-data` package installs an HDF5 nuclear data library and `cross_sections.xml`.

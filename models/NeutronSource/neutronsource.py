@@ -42,12 +42,30 @@ settings.source    = src
 # Temporarily - Because this is a vacuum, the neutrons conitinue going out infinitely, so this is added to tell OpenMC to stop tracking it
 settings.max_lost_particles = 1000000
 
+# ---------- 3D flux mesh tally (source sphere + 50 cm) ----------
+R_vis = r_cm + 50.0  # visualize out to 50 cm past the source sphere
+
+mesh = openmc.RegularMesh()
+mesh.dimension   = (60, 60, 60)  # resolution (bump up later if you want finer detail)
+mesh.lower_left  = (-R_vis, -R_vis, -R_vis)
+mesh.upper_right = ( R_vis,  R_vis,  R_vis)
+
+mesh_filter = openmc.MeshFilter(mesh)
+
+flux_tally = openmc.Tally(name="flux_3d")
+flux_tally.filters = [mesh_filter]
+flux_tally.scores  = ["flux"]
+
+tallies = openmc.Tallies([flux_tally])
+tallies.export_to_xml()
+
 # Export & run (single-threaded to avoid segfault noise while testing)
 geom.export_to_xml()
 settings.export_to_xml()
 openmc.run(threads=1)
 
 
+# Notes on OpenMC
 # ------------------------------------------------------------------------------
 # max_lost_particles vs neutron cutoff explanation
 #
