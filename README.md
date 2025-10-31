@@ -21,6 +21,17 @@ If cross sections aren't set, run in the terminal:
 source ~/.bashrc
 ```
 
+## Enable OpenMC
+Open the codespace and in the terminal type these two commands
+The first one will take a few mins since its 3gb
+```python
+micromamba activate openmc
+```
+And then test to see if it works by running this command
+```python
+python test_openmc.py
+```
+
 ## Project layout
 ```
 .devcontainer  - DO NOT TOUCH
@@ -38,8 +49,22 @@ test_openmc.py is the file to test to see if OpenMC is running correctly on your
 - 'git commit -m "YOUR NOTES"'
 - 'git push' to push your changes
 
+## OpenMC Notes
+- Sometimes, OpenMC puts limits on how long it should follow a neutron — like if it’s bouncing too much or has too little energy then it will stop tracking it.
+- OpenMC alone does not do time-dependent simulations -> Take a look at OpenMOC or Serpent transient mode 
+
+## Visualizations Notes
+Dependencies 
+- pip install plotly
+
+To see 3D Model 
+- python -m http.server 8000
+- You'll see something like 'Serving HTTP on 0.0.0.0 port 8000 (http://0.0.0.0:8000/) ...'
+- Click on http://0.0.0.0:8000/
+- Then click on the .html file in the data folder
+
+
 ## Notes
 - The `openmc-data` package installs an HDF5 nuclear data library and `cross_sections.xml`.
 - Everyone on the team will get the exact same environment when launching a Codespace.
-```
 
