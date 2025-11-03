@@ -1,37 +1,95 @@
-import openmc
+# FILE: results.py
 
-# Define your source strength (neutrons per second)
-SOURCE_STRENGTH = 1.0e15  # n/s
+import numpy as np
+import h5py
+import openmc.deplete
 
-# Define the conversion factor from MeV to Watts
-# 1 MeV/s = 1.60218e-13 Joules/s (Watts)
-MEV_PER_SECOND_TO_WATTS = 1.60218e-13
+# ---- Config ----
+U238_MAT_NAME = "1"      # Or "U-238" if you re-ran with the named material
+MEV_PER_FISSION = 200.0  # (Good approximation for U-238/Pu-239)
+MEV_TO_JOULES = 1.60218e-13
+JOULES_TO_WATTS = 1.0
 
-# --- Post-processing starts here ---
-# 1. Load the statepoint file (assuming it's named 'statepoint.10.h5' for 10 batches)
-sp = openmc.StatePoint('statepoint.5.h5')
+# --- Get all the data (This part is correct) ---
+print("Reading depletion results...")
+results = openmc.deplete.Results("depletion_results.h5")
+times_s = np.array(results.get_times(time_units='s'))  # 's'|'min'|'h'|'d'
+assert len(times_s) >= 2, "Expected at least two depletion steps."
 
-# 2. Get the tally you named "power_tally"
-tally = sp.get_tally(name='power_tally')
+with h5py.File("depletion_results.h5", "r") as f:
+    if "power" in f:
+        power_watts = f["power"][()]
+        power_watts = np.array(power_watts).reshape(-1)
+    elif "source_rate" in f:
+        sr = f["source_rate"][()]
+        power_watts = sr[:, 0]
+    else:
+        raise RuntimeError("Neither 'power' nor 'source_rate' dataset found in depletion_results.h5")
 
-total_pu_per_particle = tally.get_slice(scores=['(n,gamma)']).mean
-print(f"Total PU (from tally): {total_pu_per_particle:.4e} fissions / source particle")
+if len(power_watts) != len(times_s):
+    n = min(len(power_watts), len(times_s))
+    power_watts = power_watts[:n]
+    times_s = times_s[:n]
 
-# Get the fission data.
-total_fissions_per_particle = tally.get_slice(scores=['fission']).mean.sum()
+idx_start = 0
+idx_end = -1
 
-print(f"Total Fissions (from tally): {total_fissions_per_particle:.4e} fissions / source particle")
 
-# 3. Get the heating data. 
-# We'll sum over the whole mesh to get one total number.
-# The data is in eV, so we convert to MeV.
-total_heating_per_particle = tally.get_slice(scores=['heating']).mean.sum() * 1e-6 # (MeV / source particle)
+# Get fission rates
+t_fiss, u238_fiss_rate = results.get_reaction_rate(U238_MAT_NAME, 'U238', 'fission')
+try:
+    t_fiss, pu239_fiss_rate = results.get_reaction_rate(U238_MAT_NAME, 'Pu239', 'fission')
+except KeyError:
+    pu239_fiss_rate = np.zeros_like(u238_fiss_rate)
+fiss_rate = u238_fiss_rate + pu239_fiss_rate
+fissions_at_start   = float(fiss_rate[idx_start])
+fissions_at_10hours = float(fiss_rate[idx_end])
 
-# 4. Do the conversion to Power
-total_power_MeV_per_second = total_heating_per_particle * SOURCE_STRENGTH
-total_power_Watts = total_power_MeV_per_second * MEV_PER_SECOND_TO_WATTS
+# Get mass
+try:
+    t_mass, pu239_mass = results.get_mass(U238_MAT_NAME, 'Pu239')
+    total_pu239_grams = float(pu239_mass[idx_end])
+except (ValueError, KeyError):
+    total_pu239_grams = 0.0
 
-print(f"--- Power Calculation ---")
-print(f"Total Heating (from tally): {total_heating_per_particle:.4e} MeV / source particle")
-print(f"Source Strength (defined):  {SOURCE_STRENGTH:.4e} neutrons / sec")
-print(f"Total Power (calculated): {total_power_Watts:.4e} Watts")
+# Calculate Instantaneous Power (Watts)
+power_at_start_calc = fissions_at_start * MEV_PER_FISSION * MEV_TO_JOULES
+power_at_10hours_calc = fissions_at_10hours * MEV_PER_FISSION * MEV_TO_JOULES
+
+
+# --- NEW: Calculate TOTALS over the 10-hour interval ---
+
+# Get the time duration (10 hours in seconds)
+time_start_s = float(times_s[idx_start])
+time_end_s   = float(times_s[idx_end])
+duration_s   = time_end_s - time_start_s # Should be 36000.0
+
+# 1. Total Energy (in Joules and kWh)
+# We average the power at the start and end and multiply by time
+avg_power_watts = (power_at_start_calc + power_at_10hours_calc) / 2.0
+total_energy_joules = avg_power_watts * duration_s
+total_energy_kwh = total_energy_joules / (3.6e6) # 3.6e6 J per kWh
+
+# 2. Total Fissions (a raw count)
+# We average the fission rate and multiply by time
+avg_fission_rate = (fissions_at_start + fissions_at_10hours) / 2.0
+total_fissions_count = avg_fission_rate * duration_s
+
+# 3. Total Pu-239 (already calculated)
+# total_pu239_grams is already the total created, since it starts at 0
+
+
+# --- Print All Results (Now with correct power) ---
+print("\n--- Instantaneous Rates (t = 0 hours) ---")
+print(f"Power Rate:       {power_at_start_calc:.4e} Watts (or {power_at_start_calc / 1000:.2f} kW)")
+print(f"Fission Rate:     {fissions_at_start:.4e} fissions/sec")
+
+print("\n--- Instantaneous Rates (t = 10 hours) ---")
+print(f"Power Rate:       {power_at_10hours_calc:.4e} Watts (or {power_at_10hours_calc / 1000:.2f} kW)")
+print(f"Fission Rate:     {fissions_at_10hours:.4e} fissions/sec")
+
+print("\n--- TOTALS Accumulated over 10 hours ---")
+print(f"Total Energy Produced:  {total_energy_joules:.4e} Joules")
+print(f"                       (or {total_energy_kwh:.2f} kWh)")
+print(f"Total Fissions (count): {total_fissions_count:.4e} fissions")
+print(f"Total Pu-239 Created:   {total_pu239_grams:.6e} grams")

@@ -1,67 +1,59 @@
-# FILE: model_definition.py
-
 import openmc
+import math
 
 def build_u238_sphere(sphere_radius, world_padding=50.0):
     """
     Builds a geometry with a HOLLOW U-238 sphere (shell) at the center,
-    surrounded by a vacuum.
-    
-    The inner radius is half of the outer (sphere_radius).
-    
-    Returns a tuple: (geometry, materials)
+    surrounded by vacuum.
+
+    - Inner radius = 0.5 * outer radius
+    - Units: centimeters
+    - Returns: (geometry, materials)
     """
-    
-    # 1. Define Materials
+
+    # 1) Materials
     u238 = openmc.Material(name='U-238')
     u238.add_nuclide('U238', 1.0)
     u238.set_density('g/cm3', 19.1)
-    
+    u238.depletable = True  # required for depletion
+
     materials = openmc.Materials([u238])
-    
-    # 2. Define Geometry
-    
-    # --- Updated Surfaces ---
-    # The 'sphere_radius' is now the outer radius of the shell
-    outer_radius = sphere_radius
-    inner_radius = outer_radius / 2.0
-    
-    world_radius = outer_radius + world_padding
-    
-    # Define the three spherical surfaces
+
+    # 2) Geometry
+    outer_radius = float(sphere_radius)
+    inner_radius = 0.5 * outer_radius
+    world_radius = outer_radius + float(world_padding)
+
     inner_surface = openmc.Sphere(r=inner_radius)
     outer_surface = openmc.Sphere(r=outer_radius)
     world_boundary = openmc.Sphere(r=world_radius, boundary_type='vacuum')
-    # --- End Update ---
-    
-    
-    # --- Updated Cells ---
-    # We now need three cells
-    
-    # Cell 1: Inner hollow region (inside the inner_surface)
-    # The source will be born in this void region
+
+    # Cells
     inner_vacuum_cell = openmc.Cell(
         name='inner_vacuum',
-        region=-inner_surface  # Region is *inside* the inner surface
+        region=-inner_surface
     )
-    
-    # Cell 2: The U-238 shell
+
     shell_cell = openmc.Cell(
         name='u238_shell',
         fill=u238,
-        region=+inner_surface & -outer_surface # *Outside* inner, *Inside* outer
+        region=+inner_surface & -outer_surface
     )
-    
-    # Cell 3: Outside the shell, inside the world boundary
+
+    # 3) VOL: compute spherical shell volume and set it on the MATERIAL (for depletion)
+    shell_volume = (4.0/3.0) * math.pi * (outer_radius**3 - inner_radius**3)
+    u238.volume = shell_volume                      # <-- critical for depletion
+    shell_cell.volume = shell_volume                # optional; nice for bookkeeping
+
+    print(f"--- DEBUG: Set U-238 material volume to {u238.volume:.6f} cm^3 ---")
+    print(f"--- DEBUG: Set shell cell volume to {shell_cell.volume:.6f} cm^3 ---")
+
     outer_vacuum_cell = openmc.Cell(
         name='outer_vacuum',
-        region=+outer_surface & -world_boundary # *Outside* outer, *Inside* world
+        region=+outer_surface & -world_boundary
     )
-    # --- End Update ---
 
-    # Universe and Geometry
-    # Add all three cells to the universe
     root_universe = openmc.Universe(cells=[inner_vacuum_cell, shell_cell, outer_vacuum_cell])
     geometry = openmc.Geometry(root_universe)
-    
-    return (geometry, materials)
+
+    return geometry, materials
