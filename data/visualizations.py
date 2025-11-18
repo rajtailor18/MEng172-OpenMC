@@ -1,40 +1,57 @@
-# data/visualizations.py
-import matplotlib
-matplotlib.use("Agg")  # headless (no GUI)
-import glob
-import numpy as np
+# FILE: plot_3d_heat.py
+
 import openmc
-import matplotlib.pyplot as plt
+import numpy as np
+import plotly.graph_objects as go
 
-r_cm  = 45.72          # source radius (cm)
-R_vis = r_cm + 50.0    # extend visualization 50 cm beyond the source
+print("Loading statepoint file...")
+# Load the statepoint from the T=0 simulation
+sp = openmc.StatePoint('openmc_simulation_n0.h5')
 
-# --- config (set to your mesh dims) ---
-dims = (60, 60, 60)  # must match mesh.dimension
+print("Getting tally data...")
+# Get the 3D tally by its name
+tally = sp.get_tally(name='3d_heating_tally')
 
-# --- load newest statepoint (repo root or parent) ---
-candidates = sorted(glob.glob("statepoint.*.h5") + glob.glob("../statepoint.*.h5"))
-if not candidates:
-    raise FileNotFoundError("No statepoint.*.h5 found — run neutronsource.py first.")
-sp = openmc.StatePoint(candidates[-1])
+# Get the heating data from the tally
+# .mean gets the data, .flatten() makes it a 1D array
+data = tally.get_slice(scores=['heating']).mean.flatten()
 
-# --- get flux and normalize ---
-t = sp.get_tally(name="flux_3d")
-flux = t.mean.reshape(dims)
-flux /= (flux.max() if flux.max() > 0 else 1.0)
+# Get the mesh dimensions (e.g., (80, 80, 80))
+dim = tally.filters[0].mesh.dimension
 
-# --- Show one central slice as a heatmap png ---
-mid = flux.shape[0] // 2
-plt.imshow(flux[mid, :, :],
-           origin="lower",
-           cmap="plasma",
-           extent=[-R_vis, R_vis, -R_vis, R_vis])  # <-- centers (0,0)
-plt.title("Neutron Flux — Center Slice")
-plt.xlabel("x [cm]")
-plt.ylabel("y [cm]")
-plt.colorbar(label="Normalized Flux")
+# Get the x, y, z coordinates of the mesh
+x, y, z = (tally.filters[0].mesh.vertices[i] for i in [0, 1, 2])
 
-# --- Save image (no GUI in Codespaces) ---
-out = "data/flux_center_slice.png"
-plt.savefig(out, dpi=200, bbox_inches="tight")
-print(f"Saved: {out}")
+# --- IMPORTANT ---
+# The data is 1D, but Plotly needs a 3D grid.
+# We reshape the data array to match the mesh dimensions
+# Note: 'F' order is crucial, as OpenMC data is Fortran-ordered
+value_grid = data.reshape(dim, order='F')
+
+print("Generating 3D plot...")
+# Create a Plotly Volume plot
+fig = go.Figure(data=go.Volume(
+    x=x,
+    y=y,
+    z=z,
+    value=value_grid,
+    isomin=0.0,  # Don't show where heat is zero
+    isomax=np.max(value_grid), # Set max to the hottest point
+    opacity=0.2, # Low opacity to see through the "cloud"
+    surface_count=20, # More surfaces = more detail
+    colorscale='hot' # Use a "hot" colorscale (black-red-yellow-white)
+))
+
+# Set a dark background and make the scene fill the screen
+fig.update_layout(
+    scene_camera=dict(eye=dict(x=1.5, y=1.5, z=1.5)),
+    scene_xaxis_title="X (cm)",
+    scene_yaxis_title="Y (cm)",
+    scene_zaxis_title="Z (cm)",
+    template="plotly_dark"
+)
+
+output_filename = "3d_heat_plot.html"
+fig.write_html(output_filename, auto_open=True)
+
+print(f"Success! Saved plot to {output_filename}")
