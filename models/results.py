@@ -8,9 +8,7 @@ import openmc.deplete
 U238_MAT_NAME = "1"      # Or "U-238" if you re-ran with the named material
 MEV_PER_FISSION = 200.0  # (Good approximation for U-238/Pu-239)
 MEV_TO_JOULES = 1.60218e-13
-JOULES_TO_WATTS = 1.0
 
-# --- Get all the data (This part is correct) ---
 print("Reading depletion results...")
 results = openmc.deplete.Results("depletion_results.h5")
 times_s = np.array(results.get_times(time_units='s'))  # 's'|'min'|'h'|'d'
@@ -56,7 +54,6 @@ except (ValueError, KeyError):
 power_at_start_calc = fissions_at_start * MEV_PER_FISSION * MEV_TO_JOULES
 power_at_10hours_calc = fissions_at_10hours * MEV_PER_FISSION * MEV_TO_JOULES
 
-
 # --- NEW: Calculate TOTALS over the 10-hour interval ---
 
 # Get the time duration (10 hours in seconds)
@@ -78,18 +75,23 @@ total_fissions_count = avg_fission_rate * duration_s
 # 3. Total Pu-239 (already calculated)
 # total_pu239_grams is already the total created, since it starts at 0
 
-
 # --- Print All Results (Now with correct power) ---
 print("\n--- Instantaneous Rates (t = 0 hours) ---")
 print(f"Power Rate:       {power_at_start_calc:.4e} Watts (or {power_at_start_calc / 1000:.2f} kW)")
 print(f"Fission Rate:     {fissions_at_start:.4e} fissions/sec")
 
-print("\n--- Instantaneous Rates (t = 10 hours) ---")
+print("\n--- Instantaneous Rates (t = 1 year) ---")
 print(f"Power Rate:       {power_at_10hours_calc:.4e} Watts (or {power_at_10hours_calc / 1000:.2f} kW)")
 print(f"Fission Rate:     {fissions_at_10hours:.4e} fissions/sec")
 
-print("\n--- TOTALS Accumulated over 10 hours ---")
+print("\n--- TOTALS Accumulated over 1 ---")
 print(f"Total Energy Produced:  {total_energy_joules:.4e} Joules")
 print(f"                       (or {total_energy_kwh:.2f} kWh)")
 print(f"Total Fissions (count): {total_fissions_count:.4e} fissions")
 print(f"Total Pu-239 Created:   {total_pu239_grams:.6e} grams")
+
+
+## Neutron flux find that and add it in
+## what temp is it at?
+## Burnup - thermal energy / initial mass
+
