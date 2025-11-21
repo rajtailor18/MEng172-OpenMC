@@ -20,6 +20,11 @@ If cross sections aren't set, run in the terminal:
 ```bash
 source ~/.bashrc
 ```
+## Setup micromamba
+```python
+python setupmicromamba.py
+```
+
 
 ## Enable OpenMC
 Open the codespace and in the terminal type these two commands
