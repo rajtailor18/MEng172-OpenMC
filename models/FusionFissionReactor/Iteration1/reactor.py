@@ -6,7 +6,7 @@ import sys
 import os
 
 from blanket import build_u238_sphere
-
+from fuel_blanket import build_spentfuelsphere_albox
 # --- This block "makes it public" ---
 # Get the path to the current file's folder (e.g., .../FusionFissionReactor)
 current_file_dir = os.path.dirname(os.path.abspath(__file__))
@@ -33,7 +33,7 @@ u238_sphere_radius = 25.5
 
 # --- Transport Settings ---
 particles_per_batch = 10_000
-num_batches = 5 
+num_batches = 3
 
 # --- Depletion Parameters ---
 SOURCE_STRENGTH_PER_SEC = 1.0e15  # neutrons / sec
@@ -42,13 +42,13 @@ days_per_year = 365.0
 hours_per_day = 24.0
 seconds_per_hour = 3600.0
 
-time_years = 1.0
+time_years = 5.0
 time_seconds = time_years * days_per_year * hours_per_day * seconds_per_hour
 
 timesteps_in_seconds = [time_seconds]# Define how many steps you want (e.g., 12 steps to see monthly progress)
 num_steps = 12
 
-total_time_seconds = 31536000.0 # 1 year
+total_time_seconds = time_seconds # 1 year
 step_size = total_time_seconds / num_steps
 
 timesteps_in_seconds = [step_size] * num_steps
@@ -67,10 +67,20 @@ my_source = create_cylindrical_source(
 
 # 2. Create the Geometry and Materials
 # (This will use your modified model_definition.py)
-(my_geometry, my_materials) = build_u238_sphere(
+(my_geometry2, my_materials2) = build_u238_sphere(
     sphere_radius=u238_sphere_radius,
     world_padding=50.0
 )
+
+(my_geometry, my_materials) = build_spentfuelsphere_albox(
+    box_side=20.0,
+    box_width=20.0,
+    sphere_inner_radius=50.0,
+    sphere_outer_radius=100.0
+)
+
+my_materials.export_to_xml()
+my_geometry.export_to_xml()
 
 # 3. Define Settings for the transport "snapshot"
 settings = openmc.Settings()

@@ -19,15 +19,23 @@ assert len(times_s) >= 2, "Depletion Model does not have enough data"
 # Could also use '(n,gamma)' for capture, '(n,p)' for proton emission
 # Tuple (time array, corresponding reaction rate array)
 _, u238_fiss_rate = results.get_reaction_rate(U238_MAT_NAME, 'U238', 'fission')
+_, u235_fiss_rate = results.get_reaction_rate(U238_MAT_NAME, 'U235', 'fission')
+_, cm244_fiss_rate = results.get_reaction_rate(U238_MAT_NAME, 'Cm244', 'fission')
+
 try:
     _, pu239_fiss_rate = results.get_reaction_rate(U238_MAT_NAME, 'Pu239', 'fission')
+    _, pu240_fiss_rate = results.get_reaction_rate(U238_MAT_NAME, 'Pu240', 'fission')
+    _, pu241_fiss_rate = results.get_reaction_rate(U238_MAT_NAME, 'Pu241', 'fission')
+
 except KeyError:
     pu239_fiss_rate = np.zeros_like(u238_fiss_rate)
 
 idx_start = 0
 idx_end = -1
 
-fiss_rate = u238_fiss_rate + pu239_fiss_rate
+fiss_rate = u238_fiss_rate + pu239_fiss_rate + u235_fiss_rate + cm244_fiss_rate + pu240_fiss_rate + pu241_fiss_rate
+#fiss_rate = u238_fiss_rate + pu239_fiss_rate 
+
 fissions_at_start   = float(fiss_rate[idx_start])
 fissions_at_10hours = float(fiss_rate[idx_end])
 
@@ -82,8 +90,20 @@ total_energy_kwh = total_energy_joules / (3.6e6)
 
 print(f"Reactor Metrics: Power (kWh) - {total_energy_kwh} kWh")
 print(f"                       (or {total_energy_joules:.2f} Joules)")
-print(f"Reactor Metrics: Total Pu-239 Created - {total_pu239_grams:.6e} grams")
+t_mass, pu239_mass = results.get_mass(U238_MAT_NAME, 'Pu239')
+t_mass, cm244_mass = results.get_mass(U238_MAT_NAME, 'Cm244')
 
+initial_cm244_mass = float(cm244_mass[0])
+final_cm244_mass   = float(cm244_mass[idx_end])
+delta_cm244_mass   = final_cm244_mass - initial_cm244_mass
+
+initial_pu239_grams = float(pu239_mass[0])
+final_pu239_grams   = float(pu239_mass[idx_end])
+delta_pu239_grams   = final_pu239_grams - initial_pu239_grams
+
+print(f"Reactor Metrics:Net Pu-239 Created(+)/Destroyed(-) {delta_pu239_grams:.6e} g")
+
+print(f"Reactor Metrics:Net Cm-244 Created(+)/Destroyed(-) {delta_cm244_mass:.6e} g")
 
 print(f"Reactor Metrics: Power @ Start (kW) - {power_at_start_calc / 1000:.2f} kW")
 print(f"Reactor Metrics: Power @ End (kW) - {power_at_end_calc / 1000:.2f} kW")
@@ -122,17 +142,6 @@ print(f"Surface Area:          {surface_area_m2:.4f} m^2")
 print("-" * 30)
 print(f"AVERAGE HEAT FLUX:     {heat_flux:.2f} W/m^2")
 print("-" * 30)
-
-
-
-
-
-
-
-
-# ================================================================
-# APPEND THIS TO THE BOTTOM OF YOUR SCRIPT
-# ================================================================
 
 print("\nGenerating time-series arrays for graphing...")
 
@@ -197,3 +206,38 @@ print(repr(heat_flux_array))
 print(f"\n# 5. Neutron Flux [n/cm^2-s]:")
 print(repr(neutron_flux_array))
 print("="*50)
+
+# Constants
+JOULES_PER_MWd = 8.64e10  # 1 MWd = 8.64e10 J
+
+# 1. Get total heavy metal mass (U + Pu etc.) in kg
+hm_isos = ['U238', 'U235', 'Pu239', 'Pu240', 'Pu241']
+M_HM = 0.0
+for iso in hm_isos:
+    try:
+        _, mass_arr = results.get_mass(U238_MAT_NAME, iso, mass_units='kg')
+        M_HM += mass_arr[0]  # initial mass (kg)
+    except (KeyError, ValueError):
+        pass  # isotope not found
+
+if M_HM == 0:
+    raise RuntimeError("No heavy metal isotopes found for burnup calculation")
+
+# 2. Integrate energy over time
+#    Power array = fiss_rate * 200 MeV * 1.602e-13 J
+dt = np.diff(times_s, prepend=0.0)
+energy_J = np.cumsum(power_array * dt)  # J at each step
+
+# 3. Convert to MWd/kg
+burnup_MWd_per_kg = energy_J / (M_HM * JOULES_PER_MWd)
+
+# 4. Print and export
+print("\n--- BURNUP RESULTS ---")
+for i, bu in enumerate(burnup_MWd_per_kg):
+    print(f"Step {i:02d}: {bu:.6f} MWd/kg")
+
+print(f"\nFinal Burnup: {burnup_MWd_per_kg[-1]:.6f} MWd/kg")
+
+# Optional: include in your export arrays
+print(f"\n# 6. Burnup [MWd/kg]:")
+print(repr(burnup_MWd_per_kg))

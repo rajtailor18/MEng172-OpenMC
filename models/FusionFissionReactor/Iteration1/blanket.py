@@ -17,7 +17,13 @@ def build_u238_sphere(sphere_radius, world_padding=50.0):
     u238.set_density('g/cm3', 19.1)
     u238.depletable = True
 
-    materials = openmc.Materials([u238])
+    Na = openmc.Material(name='Na23')
+    Na.add_nuclide('Na23',1.0)
+    Na.set_density('g/cm3', 0.856)
+    Na.depletable = True
+
+    materials = openmc.Materials([u238, Na])
+    materials.export_to_xml()
 
     # 2) Geometry
     outer_radius = float(sphere_radius)
@@ -29,10 +35,19 @@ def build_u238_sphere(sphere_radius, world_padding=50.0):
     world_boundary = openmc.Sphere(r=world_radius, boundary_type='reflective')
 
     # Cells
-    inner_vacuum_cell = openmc.Cell(
+    inner_vacuum_cell2 = openmc.Cell(
         name='inner_vacuum',
         region=-inner_surface
     )
+
+    inner_vacuum_cell = openmc.Cell()
+    inner_vacuum_cell.region = -inner_surface
+    inner_vacuum_cell.fill = Na
+
+    # 3) VOL: compute spherical shell volume and set it on the MATERIAL (for depletion)
+    inner_shell_volume = (4.0/3.0) * math.pi * (inner_radius**3)
+    Na.volume = inner_shell_volume                      # <-- critical for depletion
+    inner_vacuum_cell.volume = inner_shell_volume  
 
     shell_cell = openmc.Cell(
         name='u238_shell',
