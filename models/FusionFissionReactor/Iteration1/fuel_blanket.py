@@ -1,4 +1,4 @@
-
+import openmc
 import math 
 
 def build_spentfuelsphere_albox(box_side, box_width,  sphere_inner_radius, sphere_outer_radius,):
@@ -95,24 +95,21 @@ def build_spentfuelsphere_albox(box_side, box_width,  sphere_inner_radius, spher
     aluminum.add_element('Al',1)
     aluminum.set_density('g/cm3', 2.7)
     #aluminum.temperature = T to be figured out 
-
-    materials = openmc.Materials([mspentfuel, aluminum])
     
     #Na coolant 
     Na = openmc.Material()
     Na.add_nuclide('Na23',1)
     Na.set_density('g/cm3', 0.856)
-    #Na.temperature = T to be figured out
+
+    materials = openmc.Materials([aluminum, mspentfuel, Na])
 
     # 2) Geometry
     Al_box_inner_wall = openmc.model.RectangularParallelepiped(-box_side/2, box_side/2, -box_side/2, box_side/2, -box_side/2, box_side/2, boundary_type='transmission')
     Al_box_outer_wall = openmc.model.RectangularParallelepiped(-(box_side+box_width)/2, (box_side+box_width)/2, -(box_side+box_width)/2, (box_side+box_width)/2, -(box_side+box_width)/2, (box_side+box_width)/2, boundary_type='transmission')
     inner_surface_sphere = openmc.Sphere(r=sphere_inner_radius)
     outer_surface_spheree = openmc.Sphere(r=sphere_outer_radius, boundary_type = 'vacuum')
-    
 
     # Cells
-    
     inner_box_vacuum_cell = openmc.Cell(
         name='inner_Al_vacuum',
         region=-Al_box_inner_wall
@@ -130,9 +127,6 @@ def build_spentfuelsphere_albox(box_side, box_width,  sphere_inner_radius, spher
     spent_fuel_sphere_cell.region= +inner_surface_sphere & -outer_surface_spheree
     spent_fuel_sphere_cell.fill = mspentfuel
     
-    
-    
-
     # 3) VOL: compute spherical shell volume and set it on the MATERIAL (for depletion)
     shell_volume = (4.0/3.0) * math.pi * (sphere_outer_radius**3 - sphere_inner_radius**3)
     mspentfuel.volume = shell_volume                      # <-- critical for depletion
@@ -141,11 +135,7 @@ def build_spentfuelsphere_albox(box_side, box_width,  sphere_inner_radius, spher
    
     root_universe = openmc.Universe(cells=[inner_box_vacuum_cell,al_box_cell, outer_box_coolant_cell, spent_fuel_sphere_cell])
     geometry = openmc.Geometry(root_universe)
+    geometry.export_to_xml()
+    materials.export_to_xml()
 
     return geometry, materials
-
-#test
-geometry,_ = build_spentfuelsphere_albox(40, 5, 50,100)
-geometry.export_to_xml()
-geometry.plot()
-

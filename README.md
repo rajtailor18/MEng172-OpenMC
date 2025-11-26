@@ -50,7 +50,7 @@ test_openmc.py is the file to test to see if OpenMC is running correctly on your
 ## Publishing your work
 - 'git status' to see all the code you added
 - VERY IMPORTANT - delete the cross sectional files the .tar file and the folder it creates endfb80-lowtemp
-- 'git add .' to add all your changes
+- 'git add . ':!endfb80-lowtemp/'' to add all your changes
 - 'git commit -m "YOUR NOTES"'
 - 'git push' to push your changes
 
