@@ -84,8 +84,15 @@ print()
 print(f"Reactor Metrics: Uptime - {duration} s")
 print(f"Reactor Metrics: Total Decay Heat - {total_decay_heat[1]} W")
 
-avg_power_watts = (power_at_start_calc + power_at_end_calc) / 2.0
-total_energy_joules = avg_power_watts * duration
+#removed to use a integration method instead
+#avg_power_watts = (power_at_start_calc + power_at_end_calc) / 2.0
+#total_energy_joules = avg_power_watts * duration
+#total_energy_kwh = total_energy_joules / (3.6e6) 
+
+#integration method for power average over time
+power_array = fiss_rate * MEV_PER_FISSION * MEV_TO_JOULES
+dt = np.diff(times_s, prepend=0.0)
+total_energy_joules = np.sum(power_array * dt)
 total_energy_kwh = total_energy_joules / (3.6e6) 
 
 print(f"Reactor Metrics: Power (kWh) - {total_energy_kwh} kWh")
@@ -237,6 +244,11 @@ for i, bu in enumerate(burnup_MWd_per_kg):
     print(f"Step {i:02d}: {bu:.6f} MWd/kg")
 
 print(f"\nFinal Burnup: {burnup_MWd_per_kg[-1]:.6f} MWd/kg")
+
+# 5. K_eff Array
+#sp = openmc.StatePoint('openmc_simulation_n1.h5')
+#keff = sp.k_combined  # combined estimate of k-effective
+#print(f"K-effective: {keff:.6f}")
 
 # Optional: include in your export arrays
 print(f"\n# 6. Burnup [MWd/kg]:")
